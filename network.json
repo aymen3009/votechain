@@ -1,0 +1,31 @@
+{
+    "channels": [
+        "Vote_ch"
+    ],
+    "topology": {
+        "university": {
+            "channels": [
+                "Vote_ch"
+            ],
+            "users": [
+                "U_user"
+            ]
+        },
+        "student": {
+            "channels": [
+                "Vote_ch"
+            ],
+            "users": [
+                "Test_student"
+            ]
+        },
+        "OtherParyt": {
+            "channels": [
+                "Vote_ch"
+            ],
+            "users": [
+                "watcher"
+            ]
+        }
+    }
+}

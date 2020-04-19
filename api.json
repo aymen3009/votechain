@@ -1,0 +1,89 @@
+[
+    {
+        "function": "create",
+        "verb": "post",
+        "controller": "StudentController"
+    },
+    {
+        "function": "get",
+        "verb": "get",
+        "controller": "StudentController"
+    },
+    {
+        
+        "function": "getallStudent",
+        "verb": "get",
+        "controller": "StudentController"
+    },
+    {
+        "function": "getallElection",
+        "verb": "get",
+        "controller": "StudentController"
+    },
+    {
+        "function": "addcondidate",
+        "verb": "post",
+        "controller": "StudentController"
+    },
+    {
+        "function": "addelection",
+        "verb": "post",
+        "controller": "StudentController"
+    },
+    
+    {
+        "function": "getallcondidate",
+        "verb": "get",
+        "controller": "StudentController"
+    },
+    {
+        "function": "dnomination",
+        "verb": "delete",
+        "controller":"StudentController"
+    },
+    {
+        "function": "vote",
+        "verb": "post",
+        "controller":"StudentController"
+    },
+    {
+        "function": "addsurv",
+        "verb": "post",
+        "controller":"StudentController"
+    },
+    {
+        "function": "getallsurv",
+        "verb": "get",
+        "controller":"StudentController"
+    },
+    {
+        "function": "removeone",
+        "verb": "delete",
+        "controller":"StudentController"
+    },
+    {
+        "function": "votesur",
+        "verb": "post",
+        "controller":"StudentController"
+    },
+    {
+        "function": "getcandidate",
+        "verb": "get",
+        "controller":"StudentController"
+    },
+    {
+        "function": "getmyelections",
+        "verb": "get",
+        "controller":"StudentController"
+    },
+    {
+        "function": "getmysurvs",
+        "verb": "get",
+        "controller":"StudentController"
+    },
+    {
+        "function": "removelection",
+        "verb": "delete",
+        "controller":"StudentController"
+    }
+]
