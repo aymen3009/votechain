@@ -84,7 +84,7 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     if (!existing || !existing.id) {
       throw new Error('user does not exist ');
     }
-    if (existing.condidate.getItem(id1)) {
+    if (existing.condidate[id1]) {
       throw new Error('the user is already a condidate');
     } else {
       let now = new Date;
@@ -97,12 +97,13 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
         throw new Error("the nomination for this election does not started yet ");
       }
       const condidate = new Condidate();
+      condidate.id = now.getTime()+'';
       condidate.name = existing.name;
       condidate.party = party;
       condidate.election = celection.id;
       condidate.studentid = id;
       condidate.classe = existing.classe;
-      existing.condidate.setItem(id1, true);
+      existing.condidate[id1] = true;
       await existing.save();
       await condidate.save();
     }
@@ -114,7 +115,7 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     @Param(yup.string())
     name: string,
     @Param(yup.string())
-    degree: Degree,
+    degree: string,
     @Param(yup.date())
     sd: Date,
     @Param(yup.date())
@@ -128,15 +129,26 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     @Param(yup.date())
     dnf: Date,
     @Param(yup.number().lessThan(4).moreThan(0))
-    mvps: number
+    mvps: number,
+    @Param(yup.string())
+    sender : string,
   ) {
-    let isAdmin = this.tx.identity.getAttributeValue('admin');
-    if (!isAdmin) {
+    
+    if (sender !== "admin") {
       throw new Error('Unathorized. Requester identity is not an admin');
     }
     let election = new Election();
-    election.degree = degree;
+    if (degree === 'licence') {
+      election.degree = Degree.LICENCE;
+    } else {
+      if (degree !== 'master') {
+        throw new Error('undifiened degree type');
+      }
+      election.degree = Degree.MASTER;
+    }
+    let now = new Date;
     election.finishdate = fd;
+    election.id = now.getTime()+'';
     election.startdate = sd;
     election.desc = desc;
     election.name = name;
@@ -145,7 +157,7 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     election.nstardate = ns;
     election.nfinisdate = nf;
     election.mvps = mvps;
-    await election.save();
+    await election.save(); 
   }
   @Invokable()
   public async getallcondidate(
@@ -156,22 +168,23 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
   @Invokable()
   public async dnomination(
     @Param(yup.string())
-    id: string,
+    ids: string,
     @Param(yup.string())
-    ids: string
+    ide: string
   ) {
+
+    const election = await Election.getOne(ide);
+    if (!election || !election.id) {
+      throw new Error(`there is no election with this ID ${ide}`);
+    }
     const student = await Student.getOne(ids);
     if (!student || !student.id) {
       throw new Error(`there is no student with this ID ${ids}`);
     }
-    const condidate = await Condidate.getOne(id);
-    if (!condidate || !condidate.id) {
-      throw new Error(`there is no candidate with this ID ${id}`);
-    }
-    if (ids != condidate.studentid) {
-      throw new Error(`you are not allowed to delete this candidate`)
-    }
-    const election = await Election.getOne(condidate.election);
+    const can = await this.getcandidate(ide)
+   let candidate =  can.map(element => {
+      if (element.studentid === ids) return element
+    })
     let now = new Date;
     let isfinish = election.dnfinishdate.getTime() - now.getTime();
     let isstart = election.dnstartdate.getTime() - now.getTime();
@@ -181,8 +194,8 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     if (isstart >= 0) {
       throw new Error("the election does not started yet ");
     }
-    student.condidate.setItem(election.id, false);
-    await condidate.delete();
+    student.condidate[election.id] = false;
+    await candidate[0].delete();
     await student.save();
   }
   @Invokable()
@@ -191,9 +204,10 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     id: string,
     @Param(yup.string())
     ide: string,
-    @Param(yup.array().of(yup.string()))
-    ids: Array<string>
+    @Param(yup.array())
+    ids: any
   ) {
+
     const student = await Student.getOne(id);
     if (!student || !student.id) {
       throw new Error(`there is no student with this id ${id}`);
@@ -214,35 +228,44 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     if (election.degree != student.degree) {
       throw new Error(`you are not allowed to vote in this election `);
     }
-    if (student.voted.getItem(ide)) {
+    if (student.voted[ide]) {
       throw new Error(`you have already voted `);
     }
     if (ids.length > election.mvps) {
       throw new Error(`max number of candidate(s) you can vote to is  ${election.mvps}`);
     }
+    
     if (ids.length == 0) {
       election.voters += 1;
       election.blankvotes += 1;
-      student.voted.setItem(ide, true);
+      student.voted[ide] = true;
       await election.save();
       await student.save();
       return;
     }
-    let check = true;
-    ids.forEach(async element => {
-      let condidate = await Condidate.getOne(element);
-      if ((election.id != condidate.election) || (!condidate || !condidate.id)) {
-        check = false;
+    ids.map(element => {
+      let checking = 0
+      ids.map(ele => {
+        if (ele === element) checking++  ;
+        
+      })
+      if (checking > 1) throw new Error('duplicated choices are not allowed !');
+    })
+    
+    ids.map(async element => {
+      let condidate = await Condidate.getOne(element+'');
+      if (condidate.type !== 'vote.condidate') {
+
+        throw new Error("please verify the candidate(s) id(s) ");
       }
     });
-    if (!check) {
-      throw new Error("please verify the candidate(s) id(s) ");
-    }
-    ids.forEach(async element => {
-      let condidate = await Condidate.getOne(element);
+    ids.map(async element => {
+      
+      let condidate = await Condidate.getOne(element+'');
       condidate.votes += 1;
+      await condidate.save();
     });
-    student.voted.setItem(ide, true);
+    student.voted[ide] = true;
     election.voters += 1;
     await student.save();
     await election.save();
@@ -263,11 +286,11 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     ]
     await Promise.all(mochdata_student.map(student => student.save()));
     let mochdata_election = [
-      new Election({ id: 'election1', name: 'election 1 2020 name', desc: 'this is a test election for master ', finishdate: new Date('04/14/2020 17:00'), startdate: new Date('04/14/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('03/13/2020 17:00'), degree: Degree.MASTER, mvps: 1 }),
-      new Election({ id: 'election2', name: 'election 2 2020 name', desc: 'this is a test election for licence ', finishdate: new Date('04/15/2020 17:00'), startdate: new Date('04/18/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('04/13/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
-      new Election({ id: 'election3', name: 'election 3 2020 name', desc: 'this is a test election for licence ', finishdate: new Date('04/14/2020 17:00'), startdate: new Date('04/15/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('03/13/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
-      new Election({ id: 'election4', name: 'election 4 2020 name', desc: 'this is a test election for licence ', finishdate: new Date('04/22/2020 17:00'), startdate: new Date('04/23/2020 08:00'), nstardate: new Date('04/14/2020 08:00'), nfinisdate: new Date('04/17/2020 17:00'), dnstartdate: new Date('04/18/2020 08:00'), dnfinishdate: new Date('04/17/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
-      new Election({ id: 'election5', name: 'election 5 2020 name', desc: 'this is a test election for licence ', finishdate: new Date('04/22/2020 17:00'), startdate: new Date('04/22/2020 08:00'), nstardate: new Date('04/13/2020 08:00'), nfinisdate: new Date('04/13/2020 17:00'), dnstartdate: new Date('04/15/2020 08:00'), dnfinishdate: new Date('04/16/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
+      new Election({ id: 'election1', name: 'election 1 2020 ', desc: 'this is a test election for master ', finishdate: new Date('04/14/2020 17:00'), startdate: new Date('04/14/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('03/13/2020 17:00'), degree: Degree.MASTER, mvps: 1 }),
+      new Election({ id: 'election2', name: 'election 2 2020 ', desc: 'this is a test election for licence ', finishdate: new Date('04/15/2020 17:00'), startdate: new Date('04/18/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('04/13/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
+      new Election({ id: 'election3', name: 'election 3 2020 ', desc: 'this is a test election for licence ', finishdate: new Date('04/14/2020 17:00'), startdate: new Date('04/15/2020 08:00'), nstardate: new Date('03/12/2020 08:00'), nfinisdate: new Date('03/12/2020 17:00'), dnstartdate: new Date('03/13/2020 08:00'), dnfinishdate: new Date('03/13/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
+      new Election({ id: 'election4', name: 'election 4 2020 ', desc: 'this is a test election for licence ', finishdate: new Date('04/22/2020 17:00'), startdate: new Date('04/23/2020 08:00'), nstardate: new Date('04/14/2020 08:00'), nfinisdate: new Date('04/17/2020 17:00'), dnstartdate: new Date('04/18/2020 08:00'), dnfinishdate: new Date('04/17/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
+      new Election({ id: 'election5', name: 'election 5 2020 ', desc: 'this is a test election for licence ', finishdate: new Date('04/22/2020 17:00'), startdate: new Date('04/22/2020 08:00'), nstardate: new Date('04/13/2020 08:00'), nfinisdate: new Date('04/13/2020 17:00'), dnstartdate: new Date('04/15/2020 08:00'), dnfinishdate: new Date('04/16/2020 17:00'), degree: Degree.LICENCE, mvps: 2 }),
     ]
     await Promise.all(mochdata_election.map(election => election.save()));
     let mochdata_candidate = [
@@ -284,8 +307,8 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     desc: string,
     @Param(yup.string())
     name: string,
-    @Param(yup.array().of(yup.string()))
-    choices: Array<string>,
+    @Param(yup.array())
+    choices: any,
     @Param(yup.date())
     sd: Date,
     @Param(yup.date())
@@ -296,15 +319,19 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     vnumb?: number,
 
   ) {
+let now = new Date;
     const surv = new Surv();
     surv.desc = desc;
     surv.finishdate = fd;
     surv.name = name;
+    surv.id = now.getTime()+'';
     surv.mvps = vnumb;
     surv.startdate = sd;
+    let colletion = {}
     choices.forEach(element => {
-      surv.items.setItem(element, 0);
+      colletion[element+'']= 0;
     });
+    surv.items = colletion;
     if (idst !== 'admin') {
       const student = await Student.getOne(idst);
       if (!student.id || !student) {
@@ -312,7 +339,7 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
       }
       surv.owner = student.id
     }else{
-      surv.owner = "Admin";
+      surv.owner = "admin";
     }
       await surv.save();
     }
@@ -325,25 +352,15 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     @Param(yup.string())
     id: string,
     @Param(yup.string())
-    idst ?: string,
+    idst : string,
   ) {
-      if (idst === null) {
-        let isAdmin = this.tx.identity.getAttributeValue('admin');
-        if (!isAdmin) {
-          throw new Error('Unathorized. Requester identity is not an admin');
-        }
-      }
-      const student = await Student.getOne(idst);
-      if (!student.id || !student) {
-        throw new Error('Unathorized. Student identity does not exist');
-      }
-      let surv = await Surv.getOne(id);
-      if (!surv || !surv.id) {
-        throw new Error('the survery with this ID does not exist ');
-      }
-      if (surv.owner !== student.id) {
-        throw new Error('Unathorized. Requester identity is not the owner');
-      }
+    let surv = await Surv.getOne(id);
+    if (!surv || !surv.id) {
+      throw new Error('the survery with this ID does not exist ');
+    }
+      if (idst !== surv.owner ) {
+          throw new Error('Unathorized. Requester identity is not the owner');}
+       
       surv.delete();
     }
     @Invokable()
@@ -352,8 +369,8 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     id: string,
     @Param(yup.string())
     ide: string,
-    @Param(yup.array().of(yup.string()))
-    ids: Array<string>
+    @Param(yup.array())
+    ids: any
   ) {
       const student = await Student.getOne(id);
       if (!student || !student.id) {
@@ -372,21 +389,28 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
       if (isstart >= 0) {
         throw new Error("the surv does not started yet ");
       }
-      if (student.voted.getItem(ide)) {
+      if (student.voted[ide]) {
         throw new Error(`you have already voted `);
       }
       if (ids.length > surv.mvps || ids.length < 0) {
         throw new Error(`max number of candidate(s) you can vote to is  ${surv.mvps} and the min is 1`);
       }
-      let check = true
-      ids.forEach(element => {
-        if (surv.items.getItem(element) === null) check = false
-      });
-      if (!check) throw new Error('please check the given choices ');
-      ids.forEach(element => {
-        surv.items.setItem(element, (surv.items.getItem(element) + 1));
+      ids.map(element => {
+        let checking = 0
+        ids.map(ele => {
+          if (ele === element) checking++  ;
+          
+        })
+        if (checking > 1) throw new Error('duplicated choices are not allowed !');
       })
-      student.voted.setItem(ide, true);
+      ids.forEach(element => {
+        if (surv.items[element] === undefined) throw new Error('please check the given choices ');
+      });
+      ids.forEach(element => {
+        surv.items[element] = surv.items[element] + 1;
+      })
+      student.voted[ide] = true;
+      
       await surv.save();
       await student.save();
     }
@@ -436,10 +460,7 @@ export class StudentController extends ConvectorController<ChaincodeTx> {
     @Param(yup.string())
     id: string,
   ) {
-      let isAdmin = this.tx.identity.getAttributeValue('admin');
-      if (!isAdmin) {
-        throw new Error('Unathorized. Requester identity is not an admin');
-      }
+      
       let election = await Election.getOne(id);
       if (!election || !election.id) {
         throw new Error('the survery with this ID does not exist ');

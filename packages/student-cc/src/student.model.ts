@@ -1,7 +1,7 @@
 import * as yup from 'yup';
 import { Degree } from './enums';
 import { ConvectorModel, Default, ReadOnly, Required, Validate, } from '@worldsibu/convector-core-model';
-import { HashTable } from './function';
+
 export class Student extends ConvectorModel<Student> {
   @ReadOnly()
   @Required()
@@ -21,8 +21,12 @@ export class Student extends ConvectorModel<Student> {
   @Required()
   @Validate(yup.string())
   public id: string;
-  public condidate: HashTable;;
-  public voted: HashTable;
+  @Default({})
+  @Validate(yup.object())
+  public condidate: Object;
+  @Default({})
+  @Validate(yup.object())
+  public voted: Object;
   @Required()
   @Validate(yup.string())
   public degree: Degree;
@@ -37,6 +41,9 @@ export class Condidate extends ConvectorModel<Condidate> {
   @Required()
   @Validate(yup.string())
   public studentid: string;
+  @Required()
+  @Validate(yup.string())
+  public id: string;
   @Required()
   @Validate(yup.string())
   public name: string;
@@ -61,6 +68,9 @@ export class Election extends ConvectorModel<Election> {
   @Required()
   @Validate(yup.string())
   public name : string;
+  @Required()
+  @Validate(yup.string())
+  public id: string;
   @Required()
   @Validate(yup.string())
   public desc: string;
@@ -116,7 +126,9 @@ export class Surv extends ConvectorModel<Surv>{
   @Required()
   @Validate(yup.date())
   public finishdate: Date;
-  public items: HashTable;
+  @Default({})
+  @Validate(yup.object())
+  public items: object;
   @Required()
   @Default(1)
   @Validate(yup.number().moreThan(0).lessThan(4))

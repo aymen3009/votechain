@@ -31,6 +31,10 @@ hurl invoke student student_addelection election2020 'election for test ' licenc
 
 
 hurl invoke student student_addcondidate election2020 c1600710 1600710 uget
+hurl invoke student student_addelection desc name licence 05-03-2020 05-05-2020 05-03-2020 05-03-2020 05-05-2020 05-05-2020 2 admin testelec15
+hurl invoke student student_addcondidate testelec15 condidate 1600710 uget
+hurl invoke student student_dnomination condidate 1600710
+hurl invoke student student_addsurv desc name ["choice1","choice2"] 05-03-2020 05-05-2020 1600710 
 
 
 

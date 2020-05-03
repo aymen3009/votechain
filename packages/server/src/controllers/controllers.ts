@@ -61,7 +61,7 @@ export async function StudentController_addelection_post(req: Request, res: Resp
     try{
         let params = req.body;
             res.status(200).send(await StudentControllerBackEnd
-                .addelection(params.desc,params.name,params.degree,params.sd,params.fd,params.dns,params.ns,params.nf,params.dnf,params.mvps));
+                .addelection(params.desc,params.name,params.degree,params.sd,params.fd,params.dns,params.ns,params.nf,params.dnf,params.mvps,params.sender));
             
     } catch(ex) {
         console.log('Error post StudentController_addelection', ex.stack);
@@ -83,7 +83,7 @@ export async function StudentController_dnomination_delete(req: Request, res: Re
     try{
         let params = req.body;
             res.status(200).send(await StudentControllerBackEnd
-                .dnomination(params.id,params.ids));
+                .dnomination(params.ids,params.ide));
             
     } catch(ex) {
         console.log('Error delete StudentController_dnomination', ex.stack);
@@ -105,7 +105,7 @@ export async function StudentController_addsurv_post(req: Request, res: Response
     try{
         let params = req.body;
             res.status(200).send(await StudentControllerBackEnd
-                .addsurv(params.desc,params.choices,params.sd,params.fd,params.vnumb,params.idst));
+                .addsurv(params.desc,params.name,params.choices,params.sd,params.fd,params.idst,params.vnumb));
             
     } catch(ex) {
         console.log('Error post StudentController_addsurv', ex.stack);
